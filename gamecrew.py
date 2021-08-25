@@ -6,7 +6,6 @@ import os
 
 bot = commands.Bot(command_prefix="겜!동 ")
 
-token = "ODU2NTYxMTY3NTE4MTM4Mzk4.YNC0wA.072VUkUEH6QTGCJNIvcxVGXhHe4"
 dir = "./Games"
 
 @bot.event
