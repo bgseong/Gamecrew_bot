@@ -1,4 +1,4 @@
-import discord
+import discord, datetime
 from discord.embeds import Embed
 from discord.ext import commands
 from discord.ext.commands import bot
@@ -14,6 +14,18 @@ async def on_ready():
   if not os.path.isdir(dir):
     print("게임 파일을 생성합니다.")
     os.mkdir(dir)
+
+@bot.event
+async def on_message(message):
+  if message.content.startswith("겜!동"):
+    now = datetime.datetime.now()
+    nowdateTime = now.strftime('%Y-%m-%d %H:%M:%S')
+    log=open("Log.txt", "a")
+    log.write(str(message.author.nick) + " : " + message.content+" ["+nowdateTime+"]"+"\n")
+    await bot.process_commands(message)
+    return
+
+      
 
 @bot.command(name="명령어")
 async def 명령어(ctx):
@@ -33,7 +45,10 @@ async def 목록(ctx):
   embed.set_author(name="GameCrew")
   embed.set_footer(text="GameCrew")
   for i in range(len(games)):
-    embed.add_field(name=games[i], value="게임", inline=False)
+    files=dir+"/"+games[i]
+    filelens=open(files,"r").readlines()
+    lens=str(len(filelens))+"명"
+    embed.add_field(name=games[i], value=lens, inline=False)
   await ctx.send(embed=embed)
 
 @bot.command(name="게임등록")
@@ -121,4 +136,5 @@ async def on_command_error(ctx,error):
   elif isinstance(error, commands.MissingRequiredArgument):
     await ctx.send("게임명을 입력해주세요")
 
-bot.run(os.environ['token'])
+
+bot.run("ODU2NTYxMTY3NTE4MTM4Mzk4.YNC0wA.x-u_eh5Dfbw-yfJpaYuq8Cuf9qg")
