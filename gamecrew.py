@@ -136,5 +136,3 @@ async def on_command_error(ctx,error):
   elif isinstance(error, commands.MissingRequiredArgument):
     await ctx.send("게임명을 입력해주세요")
 
-
-bot.run("ODU2NTYxMTY3NTE4MTM4Mzk4.YNC0wA.x-u_eh5Dfbw-yfJpaYuq8Cuf9qg")
