@@ -1,138 +1,78 @@
-import discord, datetime
-from discord.embeds import Embed
+import discord, os, pafy
 from discord.ext import commands
 from discord.ext.commands import bot
-import os
+from time import sleep
+from ydl import *
+from collections import deque
+bot = commands.Bot(command_prefix="겜!동 노래 ")
 
-bot = commands.Bot(command_prefix="겜!동 ")
+song_list=deque([])
+voice=None
 
-dir = "./Games"
+def youtube():
+    global song_list
+    name=[]
+    for i in range(len(song_list)):
+        info=pafy.new(song_list[i])
+        name.append(info.title)
+    return name
 
+def play_next(ctx):
+    global song_list, voice
+    play(ctx,song_list[0])
+
+def play(ctx,ur):
+    global song_list
+    if ur==None:
+        print("")
+    else:
+        song_list.append(ur)
+    if len(song_list) < 1:
+        return
+    url=song_list[0]
+    channel = ctx.author.voice.channel
+    ydl_opts = {'format': 'bestaudio'}
+    FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
+    try:
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            URL = info['formats'][0]['url']
+        voice=bot.voice_clients[0]
+        if bot.voice_clients[0].is_playing():
+            print("")
+        else:
+            song_list.popleft()
+            voice.play(discord.FFmpegPCMAudio(URL, **FFMPEG_OPTIONS), after=lambda e: play_next(ctx))
+    except:
+        song_list.popleft()
 @bot.event
-async def on_ready():
-  print("이등몸장")
-  if not os.path.isdir(dir):
-    print("게임 파일을 생성합니다.")
-    os.mkdir(dir)
-
-@bot.event
-async def on_message(message):
-  if message.content.startswith("겜!동"):
-    now = datetime.datetime.now()
-    nowdateTime = now.strftime('%Y-%m-%d %H:%M:%S')
-    log=open("Log.txt", "a")
-    log.write(str(message.author.nick) + " : " + message.content+" ["+nowdateTime+"]"+"\n")
-    await bot.process_commands(message)
-    return
-
-      
-
-@bot.command(name="명령어")
-async def 명령어(ctx):
-  embed = discord.Embed(title="GameCrew Bot 명령어", color=0x62c1cc)
-  embed.set_author(name="GameCrew")
-  embed.set_footer(text="GameCrew")
-  embed.add_field(name="겜!동 목록", value="등록된 게임들을 보여줍니다", inline=False)
-  embed.add_field(name="겜!동 선호 (게임이름)", value="등록된 게임을 선호합니다", inline=False)
-  embed.add_field(name="겜!동 선호삭제 (게임이름)", value="게임을 선호하지 않습니다.", inline=False)
-  embed.add_field(name="겜!동 선호자 (게임이름)", value="등록된 게임을 선호하는 사람을 보여줍니다.", inline=False)
-  await ctx.send(embed=embed)
-
-@bot.command(name="목록")
-async def 목록(ctx):
-  games = os.listdir(dir)
-  embed = discord.Embed(title="게임목록", color=0x62c1cc)
-  embed.set_author(name="GameCrew")
-  embed.set_footer(text="GameCrew")
-  for i in range(len(games)):
-    files=dir+"/"+games[i]
-    filelens=open(files,"r").readlines()
-    lens=str(len(filelens))+"명"
-    embed.add_field(name=games[i], value=lens, inline=False)
-  await ctx.send(embed=embed)
-
-@bot.command(name="게임등록")
-async def 게임등록(ctx,*,text):
-  if ctx.author.guild_permissions.administrator:
-    filepath=dir+"/"+text
-    if os.path.isfile(filepath):
-      await ctx.send(text+"은(는) 이미 등록된 게임입니다.")
+async def on_message(ctx):
+    global song_list
+    f=open("./Channel/"+str(ctx.guild.id),"r")
+    if f.read()==str(ctx.channel.id):
+        if ctx.content==("skip"):
+            voice = bot.voice_clients[0]
+            voice.pause()
+            await ctx.delete()
+            play(ctx,None)
+        elif ctx.content==("leave"):
+            await bot.voice_clients[0].disconnect()
+        elif ctx.content==("stop"):
+            voice = bot.voice_clients[0]
+            voice.pause()
+        elif ctx.content.find("youtube") or ctx.content.find("yotu.be"):
+            if bot.voice_clients == []:
+                await ctx.author.voice.channel.connect()
+            play(ctx,ctx.content)
+        elif ctx.content==("list"):
+            names=youtube()
+            embed=discord.Embed(title="재생목록", description="재생목록", color="0x62c1cc")
+            for i in range(names):
+                embed.add_field(name=str(i), value=names[i])
+            await ctx.send(embed=embed)
+        await ctx.delete()
+        print(song_list)
     else:
-      gamefile=open(filepath,'w')
-      await ctx.send(text+"을(를) 등록했습니다!")
-      gamefile.close()
-  else:
-    await ctx.send("당신은 권한이 없습니다.")
+        return 0
 
-@bot.command(name="게임삭제")
-async def 게임삭제(ctx,*,text):
-  if ctx.author.guild_permissions.administrator:
-    filepath=dir+"/"+text
-    if not os.path.isfile(filepath):
-      await ctx.send(text+"은(는) 존재하지 않습니다.")
-    else:
-      os.remove(filepath)
-      await ctx.send(text+"을(를) 삭제했습니다.")
-  else:
-    await ctx.send("당신은 권한이 없습니다.")
-
-@bot.command(name="선호")
-async def 선호(ctx,*,text):
-  filepath=dir+"/"+text
-  if not os.path.isfile(filepath):
-    await ctx.send(text+"은(는) 존재하지 않습니다.")
-  else:
-    if open(filepath, 'r').read().find(str(ctx.author.nick)) == 0:
-      await ctx.send("이미 "+text+"을(를) 선호 하고있습니다.")
-    else:
-      gamefile=open(filepath,"a")
-      gamefile.write(str(ctx.author.nick)+"\n")
-      await ctx.send(text+"에 선호를 추가했습니다.")
-      gamefile.close()
-
-@bot.command(name="선호삭제")
-async def 선호삭제(ctx,*,text):
-  filepath=dir+"/"+text
-  if not os.path.isfile(filepath):
-    await ctx.send(text+"은(는) 존재하지 않습니다.")
-  else:
-    if open(filepath, 'r').read().find(str(ctx.author.nick)) == -1:
-      await ctx.send("당신은"+text+"을(를) 선호 하고있지 않습니다.")
-    else:
-      with open(filepath, 'r') as infile:
-        data = infile.readlines()
-        infile.close()
-      with open(filepath, 'w') as outfile:
-        for i in data:
-          if not i.startswith(str(ctx.author.nick)):
-            outfile.write(i)
-        outfile.close()
-      await ctx.send("이제 "+text+"을(를) 선호하지 않습니다.")
-      
-
-@bot.command(name="선호자")
-async def 선호자(ctx,*,text):
-  filepath=dir+"/"+text
-  if not os.path.isfile(filepath):
-    await ctx.send(text+"은(는) 존재하지 않습니다.")
-  else:
-    file=open(filepath,'r')
-    names=file.readlines()
-    if len(names) == 0:
-      await ctx.send("선호하는 사람이 없습니다.")
-    else:
-      titlename=text+"을(를) 선호하는 사람들"
-      embed = discord.Embed(title=titlename, color=0x62c1cc)
-      embed.set_author(name="GameCrew")
-      embed.set_footer(text="GameCrew")
-      for i in range(len(names)):
-        embed.add_field(name=names[i], value="동아리 맴버", inline=False)
-      await ctx.send(embed=embed)
-
-@bot.event
-async def on_command_error(ctx,error):
-  if isinstance(error, commands.CommandNotFound):
-    await ctx.send("제대로된 명령어를 입력해주세요.")
-  elif isinstance(error, commands.MissingRequiredArgument):
-    await ctx.send("게임명을 입력해주세요")
-
+bot.run(os.environ['token'])
