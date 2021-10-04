@@ -48,8 +48,7 @@ def play(ctx,ur):
 @bot.event
 async def on_message(ctx):
     global song_list
-    f=open("./Channel/"+str(ctx.guild.id),"r")
-    if f.read()==str(ctx.channel.id):
+    if "888802297356886036"==str(ctx.channel.id):
         if ctx.content==("skip"):
             voice = bot.voice_clients[0]
             voice.pause()

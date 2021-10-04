@@ -2,3 +2,6 @@ discord.py
 asyncio
 pafy
 ydl
+pip
+youtube-dl
+ffmpeg-python
